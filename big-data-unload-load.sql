@@ -1,9 +1,24 @@
 /*
+How to run big data (1.3TB compressed) unloads and loads on Snowflake using the Transaction Processing Council Decision Support Dataset (TPC-DS)
+
+Logging
+    TABLE           ROWCOUNT    SIZE COMPRESSED     VWH         UNLOAD TIME     # FILES AT 250MB    INGEST TIME
+    customer        65M         2.9GB               small       46s             48                  1m1s
+    store_returns   2.9B        116GB               xlarge      3m34s           640                 3m25s                       
+                                                    x2large     2m1s            762                 2m
+    store_sales     28B         1.3TB               x4large     5m19s           6901                5m30s             
+
+
+
 How to:
     COPY INTO <LOCATION>    aka unload to a Stage (S3)
     COPY INTO <TABLE>       aka ingest to a Table
     Size up to save time for unload/ingest then back down to save credits
     Open the Worksheet History to track performance
+    
+Snowflake Prerequisites:
+    Create a STAGE - connection to your cloud storage
+    Create a User, Database, and VWH
 
 Benefits:
     Save your most precious resource: employee time
@@ -27,17 +42,9 @@ References:
 
 
     
-Snowflake Prerequisites:
-    Create a STAGE - connection to your cloud storage
-    Create a User, Database, and VWH
 
     
     
-TABLE           ROWCOUNT    SIZE COMPRESSED     VWH         UNLOAD TIME     # FILES AT 250MB    INGEST TIME
-customer        65M         2.9GB               small       46s             48                  1m1s
-store_returns   2.9B        116GB               xlarge      3m34s           640                 3m25s                       
-                                                x2large     2m1s            762                 2m
-store_sales     28B         1.3TB               x4large     5m19s           6901                5m30s             
 
 
     
@@ -51,12 +58,8 @@ use role sysadmin; use warehouse play_wh;
 create schema if not exists tpcds;
 use schema playdb.tpcds;
 
-alter warehouse play_wh set warehouse_size = 'xsmall';
-
---we could be using very large warehouses so we want them to auto shut-down ASAP
-    --per-second billing with a minimum of 60 seconds
-    alter warehouse play_wh set auto_suspend = 60;
-
+--xsmall small medium large xlarge x2large x3large x4large
+    alter warehouse play_wh set warehouse_size = 'xsmall';
 
 
 
@@ -73,7 +76,7 @@ alter warehouse play_wh set warehouse_size = 'xsmall';
   --CHANGE THE SOURCE TABLE AS NECESSARY
   create view tpcds.source_vw as
   select *
-  from snowflake_sample_data.tpcds_sf10tcl.store_sales;     //customer (unit test)  //store_returns (mid-sized)
+  from snowflake_sample_data.tpcds_sf10tcl.customer;     //customer (unit test)  //store_returns (mid-sized)
 
   select top 3000 * from tpcds.source_vw;
 
@@ -111,8 +114,8 @@ alter warehouse play_wh set warehouse_size = 'xsmall';
 
 
 --size up to save time and get more parallel operations
-    --XSMALL SMALL MEDIUM LARGE XLARGE X2LARGE X3LARGE X4LARGE
-    alter warehouse play_wh set warehouse_size = 'X4LARGE';
+    --xsmall small medium large xlarge x2large x3large x4large
+    alter warehouse play_wh set warehouse_size = 'small';
 
 
 
