@@ -1,0 +1,187 @@
+/*
+How to:
+    COPY INTO <LOCATION>    aka unload to a Stage (S3)
+    COPY INTO <TABLE>       aka ingest to a Table
+    Size up to save time for unload/ingest then back down to save credits
+    Open the Worksheet History to track performance
+
+Benefits:
+    Save your most precious resource: employee time
+    Query the Transaction Processing Council - Decision Support (TP-CDS) to learn different query patterns
+    Test various data loading configurations
+    
+
+
+
+    
+Snowflake Prerequisites:
+    Create a STAGE - connection to your cloud storage
+    Create a User, Database, and VWH
+    
+    
+TABLE           ROWCOUNT    SIZE COMPRESSED     VWH         UNLOAD TIME     # FILES AT 250MB    INGEST TIME
+customer        65M         2.9GB               small       46s             48                  1m1s
+store_returns   2.9B        116GB               xlarge      3m34s           640                 3m25s                       
+                                                x2large     2m1s            762                 2m
+store_sales     28B         1.3TB               x4large
+
+
+    
+
+*/
+
+
+--context
+use role sysadmin; use warehouse play_wh; 
+
+create schema if not exists tpcds;
+use schema playdb.tpcds;
+
+alter warehouse play_wh set warehouse_size = 'xsmall';
+
+--we could be using very large warehouses so we want them to auto shut-down ASAP
+    --per-second billing with a minimum of 60 seconds
+    alter warehouse play_wh set auto_suspend = 60;
+
+
+
+
+
+
+
+
+
+
+--use a view so we can pull from different tables and only change this view
+  drop view if exists tpcds.source_vw;
+  
+  
+  --CHANGE THE SOURCE TABLE AS NECESSARY
+  create view tpcds.source_vw as
+  select *
+//  from snowflake_sample_data.tpcds_sf10tcl.store_returns;   
+//  from snowflake_sample_data.tpcds_sf10tcl.customer;
+  from snowflake_sample_data.tpcds_sf10tcl.store_sales;
+
+  select top 300 * from tpcds.source_vw;
+
+
+
+
+
+
+
+
+
+
+--reset demo by dropping all files in specified stage
+  remove @playdb.public.stageofficial_171/tpcds/;
+
+
+--create empty destination table
+  drop table if exists tpcds.tpcds_target;
+  
+  --transient table is great for staging & ELT use-cases since we don't need time travel
+  create transient table tpcds.tpcds_target as 
+      select *
+      from tpcds.source_vw limit 0;
+      
+  select top 300 * from tpcds.tpcds_target;
+      
+
+
+
+
+
+
+
+
+
+
+--size up to save time and get more parallel operations
+    --XSMALL SMALL MEDIUM LARGE XLARGE X2LARGE X3LARGE X4LARGE
+    alter warehouse play_wh set warehouse_size = 'small';
+
+
+
+
+-----------------------------------------------------
+--copy into <stage> will UNLOAD from Snowflake
+    copy into @playdb.public.stageofficial_171/tpcds/load from 
+        (select * from tpcds.source_vw)
+        max_file_size = 104857600   //100MB
+//        max_file_size = 262144000   //250MB
+        overwrite = true
+        file_format = (type = csv field_optionally_enclosed_by='"');
+    
+    --verify files unloaded @ = stage
+    ls @playdb.public.stageofficial_171/tpcds/;
+
+
+    --we can always peer into a file
+    select top 30 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+        from @playdb.public.stageofficial_171/tpcds/;
+        
+        
+        
+        
+        
+        
+        
+        
+
+-----------------------------------------------------
+--copy those files back into Snowflake
+    copy into tpcds.tpcds_target 
+    from @playdb.public.stageofficial_171/tpcds/ 
+    file_format = (type = csv
+        field_optionally_enclosed_by='"'        //double-quote strings 
+        replace_invalid_characters = TRUE       //Snowflake supports UTF-8 characters
+    );
+
+--size down when done to save credits
+    alter warehouse play_wh set warehouse_size = 'xsmall';
+
+
+
+
+
+
+
+
+-----------------------------------------------------
+--verify target table
+    select top 3000 * from tpcds.tpcds_target;
+
+
+
+--count will match what we unloaded earlier
+    select count(*), 'source' location
+    from tpcds.source_vw
+        union all
+    select count(*), 'target' location
+    from tpcds.tpcds_target;
+
+
+
+
+
+
+
+
+/*
+Recap
+
+How to:
+    COPY INTO <LOCATION>    aka unload to a Stage (S3)
+    COPY INTO <TABLE>       aka ingest to a Table
+    Size up to save time for unload/ingest then back down to save credits
+    Open the Worksheet History to track performance
+
+Benefits:
+    Save your most precious resource: employee time
+    Query the Transaction Processing Council - Decision Support (TP-CDS) to learn different query patterns
+    Test various data loading configurations
+
+
+*/
