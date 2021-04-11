@@ -10,20 +10,34 @@ Benefits:
     Query the Transaction Processing Council - Decision Support (TP-CDS) to learn different query patterns
     Test various data loading configurations
     
+Use Cases for this script:
+    Stress-test unloading and loading
+    Test unloading and loading to different file formats (Delimited, JSON, Parquet)
+    See impact of Virtual Warehouse Size and different configurations on performance
 
+Open-Sourced:
+    https://github.com/allen-wong-tech/snowflake/blob/master/big-data-unload-load.sql
+    
+References:
+    https://www.snowflake.com/blog/tpc-ds-now-available-snowflake-samples/
+    https://docs.snowflake.com/en/sql-reference/sql/copy-into-location.html
+    https://docs.snowflake.com/en/sql-reference/sql/copy-into-table.html
+    https://docs.snowflake.com/en/user-guide/warehouses-overview.html#warehouse-size
+    
 
 
     
 Snowflake Prerequisites:
     Create a STAGE - connection to your cloud storage
     Create a User, Database, and VWH
+
     
     
 TABLE           ROWCOUNT    SIZE COMPRESSED     VWH         UNLOAD TIME     # FILES AT 250MB    INGEST TIME
 customer        65M         2.9GB               small       46s             48                  1m1s
 store_returns   2.9B        116GB               xlarge      3m34s           640                 3m25s                       
                                                 x2large     2m1s            762                 2m
-store_sales     28B         1.3TB               x4large
+store_sales     28B         1.3TB               x4large     5m19s           6901                5m30s             
 
 
     
@@ -59,11 +73,9 @@ alter warehouse play_wh set warehouse_size = 'xsmall';
   --CHANGE THE SOURCE TABLE AS NECESSARY
   create view tpcds.source_vw as
   select *
-//  from snowflake_sample_data.tpcds_sf10tcl.store_returns;   
-//  from snowflake_sample_data.tpcds_sf10tcl.customer;
-  from snowflake_sample_data.tpcds_sf10tcl.store_sales;
+  from snowflake_sample_data.tpcds_sf10tcl.store_sales;     //customer (unit test)  //store_returns (mid-sized)
 
-  select top 300 * from tpcds.source_vw;
+  select top 3000 * from tpcds.source_vw;
 
 
 
@@ -100,7 +112,7 @@ alter warehouse play_wh set warehouse_size = 'xsmall';
 
 --size up to save time and get more parallel operations
     --XSMALL SMALL MEDIUM LARGE XLARGE X2LARGE X3LARGE X4LARGE
-    alter warehouse play_wh set warehouse_size = 'small';
+    alter warehouse play_wh set warehouse_size = 'X4LARGE';
 
 
 
@@ -109,8 +121,7 @@ alter warehouse play_wh set warehouse_size = 'xsmall';
 --copy into <stage> will UNLOAD from Snowflake
     copy into @playdb.public.stageofficial_171/tpcds/load from 
         (select * from tpcds.source_vw)
-        max_file_size = 104857600   //100MB
-//        max_file_size = 262144000   //250MB
+        max_file_size = 262144000   //250MB
         overwrite = true
         file_format = (type = csv field_optionally_enclosed_by='"');
     
@@ -182,6 +193,19 @@ Benefits:
     Save your most precious resource: employee time
     Query the Transaction Processing Council - Decision Support (TP-CDS) to learn different query patterns
     Test various data loading configurations
+    
+Use Cases for this script:
+    Stress-test unloading and loading
+    Test unloading and loading to different file formats (Delimited, JSON, Parquet)
+    See impact of Virtual Warehouse Size and different configurations on performance
+    
+Open-Sourced:
+    https://github.com/allen-wong-tech/snowflake/blob/master/big-data-unload-load.sql
 
-
+References:
+    https://www.snowflake.com/blog/tpc-ds-now-available-snowflake-samples/
+    https://docs.snowflake.com/en/sql-reference/sql/copy-into-location.html
+    https://docs.snowflake.com/en/sql-reference/sql/copy-into-table.html
+    https://docs.snowflake.com/en/user-guide/warehouses-overview.html#warehouse-size
+    
 */
