@@ -1,5 +1,11 @@
 /*
-How to run big data (1.3TB compressed) unloads and loads on Snowflake using the Transaction Processing Council Decision Support Dataset (TPC-DS)
+17 minute Youtube demo and explanation of this script:
+    https://www.youtube.com/watch?v=Zsr2OONlMYY
+
+Subject:
+    How to run big data (1.3TB compressed) unloads and loads on Snowflake using the Transaction Processing Council Decision Support Dataset (TPC-DS).
+    We demo in the video the store_sales table which is the largest table at 1.3 Compressed Terabytes in the 10 Terabyte TPC-DS DataSet.  
+    In this script, we have it defaulted to the customer table as the default object to unload and load since it's smaller as users get used to this script.
 
 Logging
     TABLE           ROWCOUNT    SIZE COMPRESSED     VWH         UNLOAD TIME     # FILES AT 250MB    INGEST TIME
@@ -76,7 +82,7 @@ use schema playdb.tpcds;
   --CHANGE THE SOURCE TABLE AS NECESSARY
   create view tpcds.source_vw as
   select *
-  from snowflake_sample_data.tpcds_sf10tcl.customer;     //customer (unit test)  //store_returns (mid-sized)
+  from snowflake_sample_data.tpcds_sf10tcl.customer;     //customer (unit test)  //store_returns (mid-sized)    //store_sales (super-sized)
 
   select top 3000 * from tpcds.source_vw;
 
