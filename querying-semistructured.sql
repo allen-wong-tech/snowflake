@@ -1,9 +1,11 @@
 /*
 querying semi-structured
 
+We expand on this Snowflake documentation such as using get_path instead of a lateral flatten
 https://docs.snowflake.com/en/user-guide/querying-semistructured.html
 
-Based on the above Snowflake documentation, we expand a bit on it including using get_path to
+Open-Sourced:
+https://github.com/allen-wong-tech/snowflake/blob/master/querying-semistructured.sql
 
 Snowflake's Variant DataType allows us to treat semi-structured data such as JSON as a first-class citizen
 get_path allows us to access nested arrays without lateral_flatten
