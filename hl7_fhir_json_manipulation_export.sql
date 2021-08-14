@@ -14,7 +14,7 @@ What we will see:
 
 Benefits
     Snowflake for your Data Lake and Data Engineering workloads
-    High-performance, governed ETL / ELT with only SQL and on separate tools or data silos
+    High-performance, governed ETL / ELT with only SQL and no separate tools or data silos
     Lower TCO with fewer tools, fewer data silos, and less operational risk
 
 */
@@ -232,7 +232,7 @@ group by C_BIRTH_COUNTRY, C_CUSTOMER_SK, C_EMAIL_ADDRESS
 -----------------------------------------------------
 --combine it all
 
-create transient table patient_export (v variant);
+create or replace transient table patient_export (v variant);
 
 
 
@@ -328,7 +328,7 @@ What we saw:
 
 Benefits
     Snowflake for your Data Lake and Data Engineering workloads
-    High-performance, governed ETL / ELT with only SQL and on separate tools or data silos
+    High-performance, governed ETL / ELT with only SQL and no separate tools or data silos
     Lower TCO with fewer tools, fewer data silos, and less operational risk
 
 
