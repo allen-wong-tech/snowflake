@@ -1,6 +1,6 @@
 /*
 Reference
-    https://docs.snowflake.com/en/user-guide/data-load-snowpipe.html
+    https://docs.snowflake.com/en/user-guide/data-pipelines-intro.html#workflow
     https://interworks.com/blog/hcalder/2020/01/23/snowpipe-101/ 
     https://github.com/allen-wong-tech/snowflake/blob/master/unload-and-snowpipe-demo.sql
 
