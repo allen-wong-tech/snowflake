@@ -1,11 +1,13 @@
 /*
 References:
-    Snowpipe data creation script:
-        https://github.com/allen-wong-tech/snowflake/blob/master/unload-and-snowpipe-demo.sql
-    
     Stored Proc to return a resultset
         https://docs.snowflake.com/en/sql-reference/stored-procedures-usage.html#returning-a-result-set
 
+    Snowpipe data creation script:
+        https://github.com/allen-wong-tech/snowflake/blob/master/unload-and-snowpipe-demo.sql
+    
+    Open-Sourced:
+        https://github.com/allen-wong-tech/snowflake/blob/master/proc-return-resultset.sql
 
 Purpose:
     Create two procedures for our API to call.
