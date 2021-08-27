@@ -55,7 +55,7 @@ CALL procGetRecord(
         array_append(                                           
           ARRAY_APPEND(TO_ARRAY('N'), 'R'),'INSERT_TS'
         ),
-        6                                               --ID that we want the record for
+        55                                         --ID that we want the record for
         );
         
 
@@ -103,10 +103,10 @@ CREATE OR REPLACE PROCEDURE procGetLastTen(TABLE_NAME VARCHAR, COL_NAMES ARRAY)
       // Put the array in a JSON variable (so it looks like a VARIANT to
       // Snowflake).  The key is "key1", and the value is the array that has
       // the rows we want.
-      table_as_json = { "key1" : array_of_rows };
+      //      table_as_json = { "key1" : array_of_rows };
 
       // Return the rows to Snowflake, which expects a JSON-compatible VARIANT.
-      return table_as_json;
+      return array_of_rows;
       $$
       ;
       
@@ -153,10 +153,10 @@ CREATE OR REPLACE PROCEDURE procGetRecord(TABLE_NAME VARCHAR, COL_NAMES ARRAY, P
       // Put the array in a JSON variable (so it looks like a VARIANT to
       // Snowflake).  The key is "key1", and the value is the array that has
       // the rows we want.
-      table_as_json = { "key1" : array_of_rows };
+      //      table_as_json = { "key1" : array_of_rows };
 
       // Return the rows to Snowflake, which expects a JSON-compatible VARIANT.
-      return table_as_json;
+      return array_of_rows;
       $$
       ;        
 
