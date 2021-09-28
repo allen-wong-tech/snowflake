@@ -4,8 +4,11 @@
     --At one company, across 16M jobs, it has reduced files scanned by 99%
     --Analogous to online availability of non-clustered indexes
 
-    /*Public Preview Documentation
+    /*Documentation
         https://docs.snowflake.com/en/user-guide/search-optimization-service.html
+        
+      Youtube Demo of this Script
+        https://youtu.be/jo0BqJ_9EN4
     */
 
 
