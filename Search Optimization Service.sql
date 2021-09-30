@@ -68,23 +68,35 @@
     //Better experience for users 
 
 
-
+-----------------------------------------------------
+--context 
+    use role sysadmin; 
+    use warehouse compute_wh;  
+    alter warehouse compute_wh set warehouse_size = 'xsmall';
 
 
 
 
 -----------------------------------------------------
 --FYI: Setup Data
-    create database feature_db; create schema search; use warehouse poc_wh;  
+    create database if not exists feature_db; 
+    
+    use database feature_db;
+    create schema if not exists search;
 
     use SNOWFLAKE_SAMPLE_DATA.TPCDS_SF10TCL;
-
-    --On 3XL 15min
+    
+    alter warehouse compute_wh set warehouse_size = 'x3large' wait_for_completion = true;
+    
+    --On x3large this takes ~15min
     create transient table feature_db.search.store_sales_denorm_sos as
     select * 
     from store_sales
        inner join customer on ss_customer_sk = c_customer_sk
        inner join store on ss_store_sk = s_store_sk;
+
+    alter warehouse compute_wh suspend;
+    alter warehouse compute_wh set warehouse_size = 'xsmall';
 
 
 
@@ -108,12 +120,12 @@
 
 
 -----------------------------------------------------
---Setup
-use feature_db.search; alter warehouse poc_wh set warehouse_size = 'xlarge';
+--Demo a built Search Optimization Service
+use feature_db.search; alter warehouse compute_wh set warehouse_size = 'xlarge';
 
 alter session set use_cached_result=false;      //disable query cache
-alter warehouse poc_wh suspend;                 //disable virtual warehouse cache
-alter warehouse poc_wh resume;         
+alter warehouse compute_wh suspend;                 //disable virtual warehouse cache
+alter warehouse compute_wh resume;         
 
 
 
@@ -138,7 +150,7 @@ alter warehouse poc_wh resume;
         
 
 -----------------------------------------------------
---compare with base --1min 44secs with xlarge
+--compare with base ~1min 44secs with xlarge
     use SNOWFLAKE_SAMPLE_DATA.TPCDS_SF10TCL;
     
     select *
