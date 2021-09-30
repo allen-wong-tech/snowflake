@@ -180,4 +180,4 @@ alter warehouse compute_wh resume;
 -----------------------------------------------------
 --Optional
     use role sysadmin; 
-    alter warehouse poc_wh set warehouse_size = 'small';
+    alter warehouse compute_wh set warehouse_size = 'small';
