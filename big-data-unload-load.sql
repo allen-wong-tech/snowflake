@@ -132,6 +132,7 @@ use schema playdb.tpcds;
         (select * from tpcds.source_vw)
         max_file_size = 262144000   //250MB
         overwrite = true
+//        file_format = (type = parquet);
         file_format = (type = csv field_optionally_enclosed_by='"');
     
     --verify files unloaded @ = stage
