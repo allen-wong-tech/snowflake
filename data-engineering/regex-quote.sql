@@ -11,6 +11,8 @@ Benefit
 
 prerequisite: install Greg Pavlik's FOSS regex library:
     https://github.com/GregPavlik/SnowflakeUDFs/blob/main/RegularExpressions/regexp2.sql
+    https://github.com/allen-wong-tech/snowflake/blob/master/data-engineering/regex-quote.sql
+
 
 */
 
