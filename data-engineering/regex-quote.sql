@@ -1,15 +1,15 @@
 /*
-Summary
-    A comma-seperated-value (CSV) file is sent with unescaped double quotes within their double-quoted text fields.
+Challenge
+    A CSV file is sent with unescaped double quotes within their double-quoted text fields.
     This is causing ingestion to break.
     
 Fix
-    We show how to use Snowflake regex and open-source regex functions to load the data
+    We use Snowflake regex and open-source regex functions to load the data
    
 Benefit
     Even upstream files with data-quality issues can be cleaned up automatically and ingested into Snowflake
 
-prerequisite: install Greg Pavlik's FOSS regex library:
+prerequisite: run this FOSS regex library:
     https://github.com/GregPavlik/SnowflakeUDFs/blob/main/RegularExpressions/regexp2.sql
     https://github.com/allen-wong-tech/snowflake/blob/master/data-engineering/regex-quote.sql
 
@@ -22,7 +22,7 @@ create or replace temp table b (raw varchar);
 insert into b values('"A","123","SOME"THING",other""thing,"DONALD"TACK"BAK","a","",,"foo"');
 insert into b values('"B","123","SOME"THING",other""thing,"DONALD"TACK"BAK","a","",,"foo"');
 
---all in one column
+--notice quotes not next to a comma
 select * from b;
 
 --use regex to remove invalid double-quotes
@@ -35,7 +35,7 @@ select
     --Greg Pavlik's FOSS regex library to ignore valid double-quotes which will always be next to a comma:
     || official..regexp_replace2(
             substr(raw,2,len(raw)-2),
-            '(?<!,)\"(?!,)','^^^')--temporarily replace invalid double-quotes with ^^^ [note: you can use any rare Unicode string for this]
+            '(?<!,)\"(?!,)','^^^')--temporarily replace invalid double-quotes with ^^^ --note: any Unicode
     --last character is always good and could be a double-quote so always include
     || right(raw,1) as conformed    
 from b;
@@ -44,14 +44,18 @@ from b;
 create or replace temp table d as
 select
     *,
-    replace(conformed,'"','') conformed2,    --without any double-quotes
+    replace(conformed,'"','') conformed2,
     replace(
         replace(conformed,'"','')    
           ,'^^^','"') conformed3
 from c;
 
 --see data pipeline before final version
-select *
+select
+    raw,
+    conformed,      --^^^ replaces " that is not next to a comma
+    conformed2,     --double-quotes used for quoted-delimiters now removed
+    conformed3      --valid data
 from d;
 
 --create an end-user ready view ready to separate into columns
