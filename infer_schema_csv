@@ -1,0 +1,102 @@
+/*
+Pre-requisite is to install this into a database named util:
+    https://github.com/GregPavlik/InferSchema/blob/main/usage.sql
+
+What we will see: Infer the schema of a CSV file
+    stage some CSV files
+    run proc to create the DDL and then insert into that table
+    
+Benefits
+    Excellent for migrating to Snowflake and loading new CSVs
+
+*/
+
+--context
+  use role sysadmin; use warehouse compute_wh; use schema playdb.public;
+  alter warehouse compute_wh set warehouse_size = 'small';
+
+--stage some CSV data
+create or replace temporary stage INFER_DELIMITED;
+copy into @INFER_DELIMITED from (select * from "SNOWFLAKE_SAMPLE_DATA"."TPCH_SF1"."LINEITEM" limit 100000) header = true;
+
+--see the data
+ls @INFER_DELIMITED;
+select $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 from @INFER_DELIMITED;
+
+
+
+--~36seconds on Small
+call util.PUBLIC.INFER_DELIMITED_SCHEMA('@INFER_DELIMITED', 'util.PUBLIC.SKIP_HEADER', true, 'LINEITEM');
+
+
+----------------------------------------------------------------------------------------------------------
+--copy begin
+
+
+/**************************************************************************************************************
+*   Copy, paste, review and run to create a typed table and insert into the new table from stage.             *
+**************************************************************************************************************/
+
+create or replace table LINEITEM
+(
+"L_ORDERKEY" number(38,0),
+"L_PARTKEY" number(38,0),
+"L_SUPPKEY" number(38,0),
+"L_LINENUMBER" number(38,0),
+"L_QUANTITY" number(38,0),
+"L_EXTENDEDPRICE" double,
+"L_DISCOUNT" double,
+"L_TAX" double,
+"L_RETURNFLAG" string,
+"L_LINESTATUS" string,
+"L_SHIPDATE" date,
+"L_COMMITDATE" date,
+"L_RECEIPTDATE" date,
+"L_SHIPINSTRUCT" string,
+"L_SHIPMODE" string,
+"L_COMMENT" string
+);
+
+/**************************************************************************************************************
+*   The SQL statement below this attempts to copy all rows from the stage to the typed table.                 *
+**************************************************************************************************************/
+
+insert into LINEITEM select
+util.PUBLIC.try_exact_integer(trim("$1")),
+util.PUBLIC.try_exact_integer(trim("$2")),
+util.PUBLIC.try_exact_integer(trim("$3")),
+util.PUBLIC.try_exact_integer(trim("$4")),
+util.PUBLIC.try_exact_integer(trim("$5")),
+try_to_double(trim("$6")),
+try_to_double(trim("$7")),
+try_to_double(trim("$8")),
+$9,
+$10,
+util.PUBLIC.try_exact_date(trim("$11")),
+util.PUBLIC.try_exact_date(trim("$12")),
+util.PUBLIC.try_exact_date(trim("$13")),
+$14,
+$15,
+$16
+from @INFER_DELIMITED (file_format => 'util.PUBLIC.SKIP_HEADER');
+
+
+----------------------------------------------------------------------------------------------------------
+--copy end
+
+
+--our 100K rows
+select * from lineitem;
+
+
+
+
+/*
+Recap: Infer the schema of a CSV file
+    stage some CSV files
+    run proc to create the DDL and then insert into that table
+    
+Benefits
+    Excellent for migrating to Snowflake and loading new CSVs
+
+*/
