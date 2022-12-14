@@ -1,4 +1,7 @@
 /*
+Youtube Demo of this script
+    https://youtu.be/vJvQrqGAIW0
+
 Reference
     https://docs.snowflake.com/en/user-guide/data-pipelines-intro.html#workflow
     https://interworks.com/blog/hcalder/2020/01/23/snowpipe-101/ 
