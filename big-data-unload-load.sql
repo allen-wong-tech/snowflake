@@ -1,34 +1,33 @@
 /*
-17 minute Youtube demo and explanation of this script:
-    https://www.youtube.com/watch?v=Zsr2OONlMYY
+Prerequisites:
+    This will create a Stage @S3_db.public.S3_stage and monitor for Snowpipe
+        https://quickstarts.snowflake.com/guide/getting_started_with_snowpipe/index.html?index=..%2F..index#0
 
-Subject:
-    How to run big data (1.3TB Compressed / 4TB Uncompressed) unloads and loads on Snowflake using the Transaction Processing Council Decision Support Dataset (TPC-DS).
-    We demo in the video the store_sales table which is the largest table at 1.3 Compressed Terabytes in the 10 Terabyte TPC-DS DataSet.  
-    In this script, we have it defaulted to the customer table as the default object to unload and load since it's smaller as users get used to this script.
+Open-Sourced:
+    https://github.com/allen-wong-tech/snowflake/blob/master/big-data-unload-load.sql
+
+Youtube demo and explanation of this script:
+    TBD
+
+Summary:
+    How to run Snowpipe and Copy Into  big data (1.3TB Compressed / 4TB Uncompressed) unloads and loads
 
 Logging
-    TABLE           ROWCOUNT    SIZE COMPRESSED     VWH         UNLOAD TIME     # FILES AT 250MB    INGEST TIME
+    TABLE           ROWCOUNT    SIZE COMPRESSED     VWH         UNLOAD TIME     # FILES AT 250MB    INGEST TIME    WHEN
     customer        65M         2.9GB               small       46s             48                  1m1s
     store_returns   2.9B        116GB               xlarge      3m34s           640                 3m25s                       
-                                                    x2large     2m1s            762                 2m
-    store_sales     28B         1.3TB               x4large     5m19s           6901                5m30s             
+                                                    x2large     2m              762                 2m
+                                                    x2large     1m25s           762                 2m
+    store_sales     28B         1.3TB (4TB Uncom)   x4large     5m19s           6901                5m30s          April 2021       
+    store_sales     28B         1.3TB (4TB Uncom)   x4large     4m6s            6901                4m11s          May 2023 
+    store_sales     28B         1.3TB (4TB Uncom)   x5large     2m14s           8053                2m22s          May 2023 
+    store_sales     28B         1.3TB (4TB Uncom)   x6large     1m35s           8000                1m16s          May 2023 
 
 
-
-How to:
-    COPY INTO <LOCATION>    aka unload to a Stage (S3)
-    COPY INTO <TABLE>       aka ingest to a Table
-    Size up to save time for unload/ingest then back down to save credits
-    Open the Worksheet History to track performance
     
-Snowflake Prerequisites:
-    Create a STAGE - connection to your cloud storage
-    Create a User, Database, and VWH
 
 Benefits:
-    Save your most precious resource: employee time
-    Query the Transaction Processing Council - Decision Support (TP-CDS) to learn different query patterns
+    Save your most precious resource: human time
     Test various data loading configurations
     
 Use Cases for this script:
@@ -36,186 +35,159 @@ Use Cases for this script:
     Test unloading and loading to different file formats (Delimited, JSON, Parquet)
     See impact of Virtual Warehouse Size and different configurations on performance
 
-Open-Sourced:
-    https://github.com/allen-wong-tech/snowflake/blob/master/big-data-unload-load.sql
-    
-References:
-    https://www.snowflake.com/blog/tpc-ds-now-available-snowflake-samples/
-    https://docs.snowflake.com/en/sql-reference/sql/copy-into-location.html
-    https://docs.snowflake.com/en/sql-reference/sql/copy-into-table.html
-    https://docs.snowflake.com/en/user-guide/warehouses-overview.html#warehouse-size
-    
-
-
-    
-
-    
-    
+--PART 1: SETUP
+--PART 2: COPY INTO STAGE (BLOB STORAGE)
+--PART 3: SNOWPIPE
+--PART 4: COPY INTO Snowflake
 
 
     
 
 */
 
+----------------------------------------------------------------------------------------------------------
+--PART 1: SETUP
+    use role sysadmin;
 
---context
-use role sysadmin; use warehouse play_wh; 
-
-create schema if not exists tpcds;
-use schema playdb.tpcds;
-
---xsmall small medium large xlarge x2large x3large x4large
-    alter warehouse play_wh set warehouse_size = 'xsmall';
-
-
-
-
-
-
-
-
-
---use a view so we can pull from different tables and only change this view
-  drop view if exists tpcds.source_vw;
-  
-  
-  --CHANGE THE SOURCE TABLE AS NECESSARY
-  create view tpcds.source_vw as
-  select *
-  from snowflake_sample_data.tpcds_sf10tcl.customer;     //customer (unit test)  //store_returns (mid-sized)    //store_sales (super-sized)
-
-  select top 3000 * from tpcds.source_vw;
-
-
-
-
-
-
-
-
-
-
---reset demo by dropping all files in specified stage
-  remove @playdb.public.stageofficial_171/tpcds/;
-
-
---create empty destination table
-  drop table if exists tpcds.tpcds_target;
-  
-  --transient table is great for staging & ELT use-cases since we don't need time travel
-  create transient table tpcds.tpcds_target as 
-      select *
-      from tpcds.source_vw limit 0;
-      
-  select top 300 * from tpcds.tpcds_target;
-      
-
-
-
-
-
-
-
-
-
-
---size up to save time and get more parallel operations
-    --xsmall small medium large xlarge x2large x3large x4large
-    alter warehouse play_wh set warehouse_size = 'small';
-
-
-
-
------------------------------------------------------
---copy into <stage> will UNLOAD from Snowflake
-    copy into @playdb.public.stageofficial_171/tpcds/load from 
-        (select * from tpcds.source_vw)
-        max_file_size = 262144000   //250MB
-        overwrite = true
-//        file_format = (type = parquet);
-        file_format = (type = csv field_optionally_enclosed_by='"');
+    --warehouse, database, schema
+    create warehouse if not exists compute_wh with warehouse_size = 'xsmall' auto_suspend = 60 initially_suspended = true;
+    create database if not exists play_db;
+    create schema if not exists play_db.tpcds;
     
-    --verify files unloaded @ = stage
-    ls @playdb.public.stageofficial_171/tpcds/;
+    use schema play_db.tpcds;
+    
+    --use a view so we can pull from different tables and only change this view
+    drop view if exists tpcds.source_vw;
+    
+    --CHANGE THE SOURCE TABLE AS NECESSARY
+    create view tpcds.source_vw as
+    select * from snowflake_sample_data.tpcds_sf10tcl.store_sales;     //customer (65M)  //store_returns (2.9B)    //store_sales (28B)
+    
+    select top 300 * from tpcds.source_vw;
 
+        ----------------------------------------------------------------------------------------------------------
+        --PART 1A: CREATE EMPTY DESTINATION TABLES
+        --snowpipe
+        drop table if exists tpcds.tpcds_target_snowpipe;
+        create transient table tpcds.tpcds_target_snowpipe as select * from tpcds.source_vw limit 0;
+        
+        --copy into
+        drop table if exists tpcds.tpcds_target;
+        create transient table tpcds.tpcds_target as select * from tpcds.source_vw limit 0;
+        
+        --counts
+        select count(*), 'source' location from tpcds.source_vw union all
+        select count(*), 'target_snowpipe' location from tpcds.tpcds_target_snowpipe union all
+        select count(*), 'target' location from tpcds.tpcds_target;
+
+        --Create Snowpipe
+        drop pipe if exists play_db.tpcds.pipe_171;
+        
+        //PIPE is a wrapper around COPY INTO
+        create pipe play_db.tpcds.pipe_171 auto_ingest = true as 
+        copy into tpcds.tpcds_target_snowpipe
+            from @S3_db.public.S3_stage/tpcds/
+                file_format = (type = csv
+                field_optionally_enclosed_by='"'        //double-quote strings 
+                replace_invalid_characters = TRUE       //Snowflake supports UTF-8 characters
+        );
+
+    --reset demo by dropping all files in specified stage
+    ls @S3_db.public.S3_stage/tpcds;
+    remove @S3_db.public.S3_stage/tpcds;
+
+    
+
+
+
+
+
+
+
+----------------------------------------------------------------------------------------------------------
+--PART 2: COPY INTO STAGE (BLOB STORAGE)
+
+    --SIZE UP: small (customer)    xlarge (store_returns)    x4large (store_sales)
+    alter warehouse compute_wh resume;
+    alter warehouse compute_wh set warehouse_size = 'small' wait_for_completion = true;
+    
+    
+            --copy into <stage> will UNLOAD from Snowflake
+                copy into @S3_db.public.S3_stage/tpcds/snow from 
+                    (select * from tpcds.source_vw)
+                    max_file_size = 262144000   //250MB
+                    overwrite = true
+            //        file_format = (type = parquet);
+                    file_format = (type = csv field_optionally_enclosed_by='"');
+    
+    --SIZE DOWN:
+    alter warehouse compute_wh suspend;
+    alter warehouse compute_wh set warehouse_size = 'xsmall' wait_for_completion = true;
+    
+
+        
+    --verify files unloaded @ = stage
+    ls @S3_db.public.S3_stage/tpcds/;
 
     --we can always peer into a file
-    select top 30 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-        from @playdb.public.stageofficial_171/tpcds/;
-        
-        
-        
-        
-        
-        
+    select top 30 $1, $2, $3, $4, $5 from @S3_db.public.S3_stage/tpcds/;
         
         
 
------------------------------------------------------
---copy those files back into Snowflake
-    copy into tpcds.tpcds_target 
-    from @playdb.public.stageofficial_171/tpcds/ 
-    file_format = (type = csv
-        field_optionally_enclosed_by='"'        //double-quote strings 
-        replace_invalid_characters = TRUE       //Snowflake supports UTF-8 characters
-    );
-
---size down when done to save credits
-    alter warehouse play_wh set warehouse_size = 'xsmall';
 
 
 
 
 
+        
+----------------------------------------------------------------------------------------------------------
+--PART 3: SNOWPIPE
 
+    --counts
+    select count(*), 'source' location from tpcds.source_vw union all
+    select count(*), 'target_snowpipe' location from tpcds.tpcds_target_snowpipe union all
+    select count(*), 'target' location from tpcds.tpcds_target;
 
+    select system$pipe_status('pipe_171');      
 
------------------------------------------------------
---verify target table
-    select top 3000 * from tpcds.tpcds_target;
-
-
-
---count will match what we unloaded earlier
-    select count(*), 'source' location
-    from tpcds.source_vw
-        union all
-    select count(*), 'target' location
-    from tpcds.tpcds_target;
+    select top 300 * from tpcds_target_snowpipe;
 
 
 
 
 
 
+        
+        
+        
+----------------------------------------------------------------------------------------------------------
+--PART 4: COPY INTO Snowflake
+    --SIZE UP: small (customer)    xlarge (store_returns)    x4large (store_sales)
+    alter warehouse compute_wh resume;
+    alter warehouse compute_wh set warehouse_size = 'small' wait_for_completion = true;
 
+        copy into tpcds.tpcds_target 
+        from @S3_db.public.S3_stage/tpcds/ 
+        file_format = (type = csv
+            field_optionally_enclosed_by='"'        //double-quote strings 
+            replace_invalid_characters = TRUE       //Snowflake supports UTF-8 characters
+        );
+
+    --SIZE DOWN:
+    alter warehouse compute_wh suspend;
+    alter warehouse compute_wh set warehouse_size = 'xsmall' wait_for_completion = true;
+
+    --counts
+    select count(*), 'source' location from tpcds.source_vw union all
+    select count(*), 'target_snowpipe' location from tpcds.tpcds_target_snowpipe union all
+    select count(*), 'target' location from tpcds.tpcds_target;
 
 /*
-Recap
+RECAP
 
-How to:
-    COPY INTO <LOCATION>    aka unload to a Stage (S3)
-    COPY INTO <TABLE>       aka ingest to a Table
-    Size up to save time for unload/ingest then back down to save credits
-    Open the Worksheet History to track performance
+PART 1: SETUP
+PART 2: COPY INTO STAGE (BLOB STORAGE)
+PART 3: SNOWPIPE
+PART 4: COPY INTO Snowflake
 
-Benefits:
-    Save your most precious resource: employee time
-    Query the Transaction Processing Council - Decision Support (TP-CDS) to learn different query patterns
-    Test various data loading configurations
-    
-Use Cases for this script:
-    Stress-test unloading and loading
-    Test unloading and loading to different file formats (Delimited, JSON, Parquet)
-    See impact of Virtual Warehouse Size and different configurations on performance
-    
-Open-Sourced:
-    https://github.com/allen-wong-tech/snowflake/blob/master/big-data-unload-load.sql
-
-References:
-    https://www.snowflake.com/blog/tpc-ds-now-available-snowflake-samples/
-    https://docs.snowflake.com/en/sql-reference/sql/copy-into-location.html
-    https://docs.snowflake.com/en/sql-reference/sql/copy-into-table.html
-    https://docs.snowflake.com/en/user-guide/warehouses-overview.html#warehouse-size
-    
 */
