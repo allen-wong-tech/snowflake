@@ -1,4 +1,7 @@
 /*
+Summary:
+    How to run Snowpipe and Copy Into for big data (1.3TB Compressed / 4TB Uncompressed) unloads and loads
+
 Prerequisites:
     This will create a Stage @S3_db.public.S3_stage and monitor for Snowpipe
         https://quickstarts.snowflake.com/guide/getting_started_with_snowpipe/index.html?index=..%2F..index#0
@@ -7,41 +10,31 @@ Open-Sourced:
     https://github.com/allen-wong-tech/snowflake/blob/master/big-data-unload-load.sql
 
 Youtube demo and explanation of this script:
-    TBD
-
-Summary:
-    How to run Snowpipe and Copy Into  big data (1.3TB Compressed / 4TB Uncompressed) unloads and loads
-
-Logging
+    Version 2 (TBD)
+    Version 1 (Back in May 2021, we ran a 4XL for 5min 30sec): https://www.youtube.com/watch?v=Zsr2OONlMYY
+    
+Actual Results
     TABLE           ROWCOUNT    SIZE COMPRESSED     VWH         UNLOAD TIME     # FILES AT 250MB    INGEST TIME    WHEN
     customer        65M         2.9GB               small       46s             48                  1m1s
     store_returns   2.9B        116GB               xlarge      3m34s           640                 3m25s                       
                                                     x2large     2m              762                 2m
                                                     x2large     1m25s           762                 2m
     store_sales     28B         1.3TB (4TB Uncom)   x4large     5m19s           6901                5m30s          April 2021       
-    store_sales     28B         1.3TB (4TB Uncom)   x4large     4m6s            6901                4m11s          May 2023 
+    store_sales     28B         1.3TB (4TB Uncom)   x4large     4m6s            7161                4m19s          May 2023 
     store_sales     28B         1.3TB (4TB Uncom)   x5large     2m14s           8053                2m20s          May 2023 
     store_sales     28B         1.3TB (4TB Uncom)   x6large     1m35s           8000                1m16s          May 2023 
 
-
-    
 
 Benefits:
     Save your most precious resource: human time
     Test various data loading configurations
     
-Use Cases for this script:
-    Stress-test unloading and loading
-    Test unloading and loading to different file formats (Delimited, JSON, Parquet)
-    See impact of Virtual Warehouse Size and different configurations on performance
+Agenda:
+    PART 1: SETUP
+    PART 2: COPY INTO STAGE (BLOB STORAGE)
+    PART 3: SNOWPIPE into tpcds_target_snowpipe
+    PART 4: COPY INTO tpcds_target_copy_into
 
---PART 1: SETUP
---PART 2: COPY INTO STAGE (BLOB STORAGE)
---PART 3: SNOWPIPE into tpcds_target_snowpipe
---PART 4: COPY INTO tpcds_target_copy_into
-
-
-    
 
 */
 
@@ -53,6 +46,13 @@ Use Cases for this script:
 
     --warehouse, database, schema
     create warehouse if not exists compute_wh with warehouse_size = 'xsmall' auto_suspend = 60 initially_suspended = true;
+    
+    --specifically name a warehouse that we use for store_sales to easier see credit consumption
+    create warehouse if not exists x4large_wh with warehouse_size = 'x4large' auto_suspend = 1 initially_suspended = true;
+    create warehouse if not exists x5large_wh with warehouse_size = 'x5large' auto_suspend = 1 initially_suspended = true;
+
+    use warehouse compute_wh;
+    
     create database if not exists play_db;
     create schema if not exists play_db.tpcds;
     
@@ -62,6 +62,7 @@ Use Cases for this script:
     drop view if exists tpcds.source_vw;
     
     --CHANGE THE SOURCE TABLE AS NECESSARY
+    --Find and Replace snow_<table> with snow_<new_table>
     create view tpcds.source_vw as
     select * from snowflake_sample_data.tpcds_sf10tcl.customer;     //customer (65M)  //store_returns (2.9B)    //store_sales (28B)
     
@@ -110,9 +111,11 @@ Use Cases for this script:
 --PART 2: COPY INTO STAGE (BLOB STORAGE)
 
     --SIZE UP: small (customer)    xlarge (store_returns)    x4large (store_sales)
-    -- alter warehouse compute_wh resume;
+    use warehouse compute_wh;
     alter warehouse compute_wh set warehouse_size = 'small' wait_for_completion = true;
     
+        -- use warehouse x4large_wh; alter warehouse x4large_wh resume;
+        -- use warehouse x5large_wh;
     
             --copy into <stage> will UNLOAD from Snowflake
                 copy into @S3_db.public.S3_stage/tpcds/snow_customer from 
@@ -121,6 +124,9 @@ Use Cases for this script:
                     overwrite = true
             //        file_format = (type = parquet);
                     file_format = (type = csv field_optionally_enclosed_by='"');
+
+        -- alter warehouse x4large_wh suspend;
+        use warehouse compute_wh;
     
     --SIZE DOWN:
     alter warehouse compute_wh suspend;
@@ -167,6 +173,9 @@ Use Cases for this script:
     -- alter warehouse compute_wh resume;
     alter warehouse compute_wh set warehouse_size = 'small' wait_for_completion = true;
 
+        -- use warehouse x4large_wh;
+        -- use warehouse x5large_wh;
+    
         copy into tpcds.tpcds_target_copy_into 
         from @S3_db.public.S3_stage/tpcds/ 
         file_format = (type = csv
@@ -174,6 +183,8 @@ Use Cases for this script:
             replace_invalid_characters = TRUE       //Snowflake supports UTF-8 characters
         );
 
+        use warehouse compute_wh;
+        
     --SIZE DOWN:
     alter warehouse compute_wh suspend;
     alter warehouse compute_wh set warehouse_size = 'xsmall' wait_for_completion = true;
@@ -185,7 +196,7 @@ Use Cases for this script:
 
 
 -----------------------------------------------------
---CLEANUP
+--RESET
 
 
 truncate table tpcds.tpcds_target_snowpipe;
@@ -196,6 +207,16 @@ drop pipe if exists pipe_171_snow_customer;
 
 ls @S3_db.public.S3_stage/tpcds;
 remove @S3_db.public.S3_stage/tpcds;
+
+drop warehouse if exists x4large_wh;
+drop warehouse if exists x5large_wh;
+
+
+/* COMPLETE RESET
+-- drop warehouse if exists compute_wh;
+-- drop database play_db;
+*/
+
 
 
 /*
