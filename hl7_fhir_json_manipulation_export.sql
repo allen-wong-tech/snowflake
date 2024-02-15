@@ -1,4 +1,7 @@
 /*
+Change Log
+Feb 15 2024     AWong   Changed to @play_stage internal stage and added create DB and warehouse
+
 References
     https://www.hl7.org/fhir/patient-examples.html
     https://www.hl7.org/fhir/patient-example-c.html
@@ -18,9 +21,18 @@ Benefits
     Lower TCO with fewer tools, fewer data silos, and less operational risk
 
 */
+--------------------------------------------------------
+--setup
+    use role sysadmin;
+
+    --warehouse, database, schema
+    create warehouse if not exists compute_wh with warehouse_size = 'xsmall' auto_suspend = 60 initially_suspended = true;
+    
+    create database if not exists play_db;
+    create schema if not exists play_db.public;
 
 --set context
-  use role sysadmin;  use warehouse play_wh;  use schema playdb.public;
+  use role sysadmin;  use warehouse compute_wh;  use schema play_db.public;
 
 
 
@@ -284,18 +296,20 @@ select * from patient_export;
 -----------------------------------------------------
 --export as JSON file to data lake
 
+create stage if not exists play_stage;
+
     --see what is in our cloud storage
-    ls @playdb.public.stageofficial_171/json/jsonexport;
+    ls @play_stage;
     
     --optional: remove file(s)
-    rm @playdb.public.stageofficial_171/json/jsonexport;
+    rm @play_stage;
     
     
     
     
 
     --export to cloud storage
-    copy into @playdb.public.stageofficial_171/json/jsonexport from 
+    copy into @play_db.public.play_stage from 
         (select * from patient_export)
         file_format=(type=json)
         overwrite = true; 
@@ -305,10 +319,10 @@ select * from patient_export;
 
 
     --verify files here or in cloud storage
-    ls @playdb.public.stageofficial_171/json/jsonexport;
+    ls @play_db.public.play_stage;
     
     
-    select $1, $2, $3, $4, $5, $6, $7, $8 from @playdb.public.stageofficial_171/json/jsonexport;
+    select $1, $2, $3, $4, $5, $6, $7, $8 from @play_db.public.play_stage;
     
 
 
@@ -347,4 +361,4 @@ Benefits
 
 
 --reset
---rm  @playdb.public.stageofficial_171/json/jsonexport;
+-- rm  @play_db.public.play_stage;
