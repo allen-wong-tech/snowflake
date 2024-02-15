@@ -3,7 +3,7 @@ Summary:
     How to run Snowpipe and Copy Into for big data (1.3TB Compressed / 4TB Uncompressed) unloads and loads
 
 Prerequisites:
-    This will create a Stage @S3_db.public.S3_stage and monitor for Snowpipe
+    This will create a Stage @S3_db.public.S3_stage and monitor for Snowpipe.  We need S3 stage for auto-ingest
         https://quickstarts.snowflake.com/guide/getting_started_with_snowpipe/index.html?index=..%2F..index#0
 
 Open-Sourced:
@@ -49,7 +49,7 @@ Agenda:
     
     --specifically name a warehouse that we use for store_sales to easier see credit consumption
     create warehouse if not exists x4large_wh with warehouse_size = 'x4large' auto_suspend = 1 initially_suspended = true;
-    create warehouse if not exists x5large_wh with warehouse_size = 'x5large' auto_suspend = 1 initially_suspended = true;
+    -- create warehouse if not exists x5large_wh with warehouse_size = 'x5large' auto_suspend = 1 initially_suspended = true;
 
     use warehouse compute_wh;
     
@@ -77,11 +77,18 @@ Agenda:
         --copy into
         drop table if exists tpcds.tpcds_target_copy_into;
         create transient table tpcds.tpcds_target_copy_into as select * from tpcds.source_vw limit 0;
+
+        --copy into Parquet
+        drop table if exists tpcds.tpcds_target_copy_into_parquet;
+        create transient table tpcds.tpcds_target_copy_into_parquet as select * from tpcds.source_vw limit 0;
+
         
         --counts
         select count(*), 'source' location from tpcds.source_vw union all
         select count(*), 'target_snowpipe' location from tpcds.tpcds_target_snowpipe union all
-        select count(*), 'target_copy_into' location from tpcds.tpcds_target_copy_into;
+        select count(*), 'target_copy_into' location from tpcds.tpcds_target_copy_into union all
+        select count(*), 'target_copy_into_parquet' location from tpcds.tpcds_target_copy_into_parquet
+        ;
 
         --Create Snowpipe
         drop pipe if exists play_db.tpcds.pipe_171_snow_customer;
@@ -125,6 +132,12 @@ Agenda:
             //        file_format = (type = parquet);
                     file_format = (type = csv field_optionally_enclosed_by='"');
 
+                copy into @S3_db.public.S3_stage/tpcds/snow_customer_parquet from 
+                    (select * from tpcds.source_vw)
+                    max_file_size = 262144000   //250MB
+                    overwrite = true
+                    file_format = (type = parquet);
+                    
         -- alter warehouse x4large_wh suspend;
         use warehouse compute_wh;
     
@@ -154,8 +167,11 @@ Agenda:
     --counts
     select count(*), 'source' location from tpcds.source_vw union all
     select count(*), 'target_snowpipe' location from tpcds.tpcds_target_snowpipe union all
-    select count(*), 'target_copy_into' location from tpcds.tpcds_target_copy_into;
+    select count(*), 'target_copy_into' location from tpcds.tpcds_target_copy_into union all
+    select count(*), 'target_copy_into_parquet' location from tpcds.tpcds_target_copy_into_parquet
+    ;
 
+    
     select system$pipe_status('pipe_171_snow_customer');      
 
     select top 300 * from tpcds_target_snowpipe;
@@ -192,7 +208,9 @@ Agenda:
     --counts
     select count(*), 'source' location from tpcds.source_vw union all
     select count(*), 'target_snowpipe' location from tpcds.tpcds_target_snowpipe union all
-    select count(*), 'target_copy_into' location from tpcds.tpcds_target_copy_into;
+    select count(*), 'target_copy_into' location from tpcds.tpcds_target_copy_into union all
+    select count(*), 'target_copy_into_parquet' location from tpcds.tpcds_target_copy_into_parquet
+    ;
 
 
 -----------------------------------------------------
@@ -201,6 +219,7 @@ Agenda:
 
 truncate table tpcds.tpcds_target_snowpipe;
 truncate table tpcds.tpcds_target_copy_into;
+truncate table tpcds.tpcds_target_copy_into_parquet;
 
 show pipes;
 drop pipe if exists pipe_171_snow_customer;
