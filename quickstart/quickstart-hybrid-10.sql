@@ -2,6 +2,7 @@
 https://quickstarts.snowflake.com/guide/getting_started_with_hybrid_tables/index.html?index=..%2F..index#0
 https://docs.snowflake.com/en/user-guide/tables-hybrid
 
+https://github.com/allen-wong-tech/snowflake/blob/master/quickstart/quickstart-hybrid-10.sql
 
 2 SETUP
 
