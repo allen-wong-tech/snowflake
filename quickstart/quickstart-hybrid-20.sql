@@ -1,9 +1,11 @@
 /*
 https://quickstarts.snowflake.com/guide/getting_started_with_hybrid_tables/index.html?index=..%2F..index#4
 
+https://github.com/allen-wong-tech/snowflake/blob/master/quickstart/quickstart-hybrid-20.sql
+
 */
 
--- Step 4.5
+    -- Step 4.5
     USE ROLE HYBRID_QUICKSTART_ROLE;
     USE WAREHOUSE HYBRID_QUICKSTART_WH;
     USE SCHEMA HYBRID_QUICKSTART_DB.DATA;
@@ -20,4 +22,4 @@ https://quickstarts.snowflake.com/guide/getting_started_with_hybrid_tables/index
     WHERE order_id = $MIN_ORDER_ID;
 
     
--- Open "Hybrid Table - QuickStart" worksheet and run a commit statement to commit the open transaction.
+    -- Return to "QuickStart hybrid 10" worksheet and run a commit statement to commit the open transaction.
