@@ -1,4 +1,7 @@
 /*
+Youtube Demo:
+https://youtu.be/Vh3GxXuYdj0?si=uYtEgtx-tnbGNDas
+
 https://quickstarts.snowflake.com/guide/getting_started_with_hybrid_tables/index.html?index=..%2F..index#0
 https://docs.snowflake.com/en/user-guide/tables-hybrid
 
