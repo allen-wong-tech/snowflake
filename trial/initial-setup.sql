@@ -1,4 +1,6 @@
 /*
+https://github.com/allen-wong-tech/snowflake/blob/master/trial/initial-setup.sql
+
 get compute_wh ready for stress-testing via multi-clustering
 create accountadmin and sysadmin users for new account
 */
