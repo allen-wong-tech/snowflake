@@ -1,6 +1,7 @@
 /*
 Machine Learning-Based Alerts for Snowflake FinOps
 https://medium.com/snowflake/machine-learning-based-alerts-for-snowflake-finops-8ec640fb1cee
+https://github.com/allen-wong-tech/snowflake/blob/master/data-engineering/anomaly-detection-email.sql
 */
 
 use schema play_db.public;
