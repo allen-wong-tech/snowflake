@@ -1,4 +1,7 @@
 /*
+Youtube demo and explanation of this script:
+    Version 1 (Back in May 2021, we ran a 4XL for 5min 30sec): https://www.youtube.com/watch?v=Zsr2OONlMYY
+
 Summary:
     How to run Snowpipe and Copy Into for big data (1.3TB Compressed / 4TB Uncompressed) unloads and loads
 
@@ -9,8 +12,6 @@ Prerequisites:
 Open-Sourced:
     https://github.com/allen-wong-tech/snowflake/blob/master/big-data-unload-load.sql
 
-Youtube demo and explanation of this script:
-    Version 1 (Back in May 2021, we ran a 4XL for 5min 30sec): https://www.youtube.com/watch?v=Zsr2OONlMYY
     
 Actual Results
     TABLE           ROWCOUNT    SIZE COMPRESSED     VWH         UNLOAD TIME     # FILES AT 250MB    INGEST TIME    WHEN
