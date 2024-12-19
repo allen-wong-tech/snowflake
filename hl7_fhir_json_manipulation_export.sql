@@ -1,4 +1,7 @@
 /*
+Youtube Demo of this
+https://www.youtube.com/watch?v=swmBeQJva1s
+
 Change Log
 Feb 15 2024     AWong   Changed to @play_stage internal stage and added create DB and warehouse
 
